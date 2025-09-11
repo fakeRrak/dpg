@@ -41,14 +41,19 @@ def draw_thermometer_scale() -> None:
     base_y = 150
 
     count = int(max_temp // step) + 1
+    last_y = base_y + 20  # ensure first label is drawn
     for i in range(count):
         value = i * step
         y = base_y - (value / max_temp) * height
         tick_tag = f"thermo_tick_{i}"
-        text_tag = f"thermo_text_{i}"
         dpg.draw_line((35, y), (45, y), color=(255, 255, 255), parent="thermo_draw", tag=tick_tag)
-        dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_draw", tag=text_tag)
-        thermo_tick_tags.extend([tick_tag, text_tag])
+        thermo_tick_tags.append(tick_tag)
+        # draw text only if it does not overlap previous label
+        if last_y - y >= 15 or i == count - 1:
+            text_tag = f"thermo_text_{i}"
+            dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_draw", tag=text_tag)
+            thermo_tick_tags.append(text_tag)
+            last_y = y
 
 
 def draw_pressure_scale() -> None:
@@ -61,6 +66,8 @@ def draw_pressure_scale() -> None:
     step = max(1e-5, dpg.get_value("pressure_step"))
     count = int(max_pressure // step) + 1
 
+    last_angle = None
+    min_angle_step = 0.2  # radians ~11 degrees
     for i in range(count):
         value = i * step
         angle = math.pi - (value / max_pressure) * math.pi
@@ -71,10 +78,18 @@ def draw_pressure_scale() -> None:
         tx = 100 + 90 * math.cos(angle) - 10
         ty = 100 - 90 * math.sin(angle) - 5
         tick_tag = f"pressure_tick_{i}"
-        text_tag = f"pressure_text_{i}"
         dpg.draw_line((x1, y1), (x2, y2), color=(255, 255, 255), parent="pressure_draw", tag=tick_tag)
-        dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_draw", tag=text_tag)
-        pressure_tick_tags.extend([tick_tag, text_tag])
+        pressure_tick_tags.append(tick_tag)
+        if (
+            last_angle is None
+            or abs(last_angle - angle) >= min_angle_step
+            or i == 0
+            or i == count - 1
+        ):
+            text_tag = f"pressure_text_{i}"
+            dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_draw", tag=text_tag)
+            pressure_tick_tags.append(text_tag)
+            last_angle = angle
 
 
 def update_thermo_scale(sender=None, app_data=None, user_data=None) -> None:
@@ -106,6 +121,20 @@ def update_pressure_gauge(pressure: float) -> None:
     dpg.configure_item("pressure_arrow", p1=(100, 100), p2=(x, y))
 
 
+def adjust_scales(out_temp: float, out_pressure: float) -> None:
+    """Auto adjust instrument scales based on current readings."""
+    for value, max_tag, step_tag, draw_func in [
+        (out_temp, "temp_max", "temp_step", draw_thermometer_scale),
+        (out_pressure, "pressure_max", "pressure_step", draw_pressure_scale),
+    ]:
+        max_val = dpg.get_value(max_tag)
+        step = max(1e-5, dpg.get_value(step_tag))
+        if value > 0.9 * max_val:
+            new_max = math.ceil((value * 1.1) / step) * step
+            dpg.set_value(max_tag, new_max)
+            draw_func()
+
+
 def update_sensors():
     """Simulate updating sensor values based on user inputs."""
     desired_temp = dpg.get_value("desired_temp")
@@ -116,6 +145,8 @@ def update_sensors():
 
     out_temp = desired_temp + random.uniform(-1, 1)
     out_pressure = inlet_pressure + random.uniform(-5, 5)
+
+    adjust_scales(out_temp, out_pressure)
 
     dpg.set_value("out_temp_val", f"{out_temp:.1f} \u00b0C")
     dpg.set_value("out_pressure_val", f"{out_pressure:.1f} Па")
@@ -266,18 +297,22 @@ with dpg.window(label="Главное окно", width=500, height=400):
 
     dpg.add_separator()
     with dpg.group(horizontal=True):
-        with dpg.drawlist(width=60, height=180, tag="thermo_draw"):
-            dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
-            dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
-            dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
-            dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
-        with dpg.drawlist(width=200, height=120, tag="pressure_draw"):
-            arc_points = [
-                (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
-                for theta in [i * math.pi / 20 for i in range(21)]
-            ]
-            dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
-            dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
+        with dpg.group():
+            dpg.add_text("Термометр")
+            with dpg.drawlist(width=60, height=180, tag="thermo_draw"):
+                dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
+                dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
+                dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
+                dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
+        with dpg.group():
+            dpg.add_text("Манометр")
+            with dpg.drawlist(width=200, height=120, tag="pressure_draw"):
+                arc_points = [
+                    (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
+                    for theta in [i * math.pi / 20 for i in range(21)]
+                ]
+                dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
+                dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
 
 draw_thermometer_scale()
 draw_pressure_scale()
