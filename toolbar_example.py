@@ -25,18 +25,82 @@ dpg.create_viewport(title="Панель приборов AVO", width=500, height
 
 
 
+thermo_tick_tags: list[str] = []
+pressure_tick_tags: list[str] = []
+
+
+def draw_thermometer_scale() -> None:
+    """Draw tick marks and labels for the thermometer."""
+    for tag in thermo_tick_tags:
+        dpg.delete_item(tag)
+    thermo_tick_tags.clear()
+
+    max_temp = dpg.get_value("temp_max")
+    step = max(1e-5, dpg.get_value("temp_step"))
+    height = 120
+    base_y = 150
+
+    count = int(max_temp // step) + 1
+    for i in range(count):
+        value = i * step
+        y = base_y - (value / max_temp) * height
+        tick_tag = f"thermo_tick_{i}"
+        text_tag = f"thermo_text_{i}"
+        dpg.draw_line((35, y), (45, y), color=(255, 255, 255), parent="thermo_draw", tag=tick_tag)
+        dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_draw", tag=text_tag)
+        thermo_tick_tags.extend([tick_tag, text_tag])
+
+
+def draw_pressure_scale() -> None:
+    """Draw tick marks and labels for the pressure gauge."""
+    for tag in pressure_tick_tags:
+        dpg.delete_item(tag)
+    pressure_tick_tags.clear()
+
+    max_pressure = dpg.get_value("pressure_max")
+    step = max(1e-5, dpg.get_value("pressure_step"))
+    count = int(max_pressure // step) + 1
+
+    for i in range(count):
+        value = i * step
+        angle = math.pi - (value / max_pressure) * math.pi
+        x1 = 100 + 70 * math.cos(angle)
+        y1 = 100 - 70 * math.sin(angle)
+        x2 = 100 + 80 * math.cos(angle)
+        y2 = 100 - 80 * math.sin(angle)
+        tx = 100 + 90 * math.cos(angle) - 10
+        ty = 100 - 90 * math.sin(angle) - 5
+        tick_tag = f"pressure_tick_{i}"
+        text_tag = f"pressure_text_{i}"
+        dpg.draw_line((x1, y1), (x2, y2), color=(255, 255, 255), parent="pressure_draw", tag=tick_tag)
+        dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_draw", tag=text_tag)
+        pressure_tick_tags.extend([tick_tag, text_tag])
+
+
+def update_thermo_scale(sender=None, app_data=None, user_data=None) -> None:
+    draw_thermometer_scale()
+    update_sensors()
+
+
+def update_pressure_scale(sender=None, app_data=None, user_data=None) -> None:
+    draw_pressure_scale()
+    update_sensors()
+
+
 def update_thermometer(temp: float) -> None:
     """Update thermometer level based on temperature."""
-    temp = max(0.0, min(temp, 100.0))
+    max_temp = dpg.get_value("temp_max")
+    temp = max(0.0, min(temp, max_temp))
     height = 120  # drawable height of tube
-    top = 150 - (temp / 100.0) * height
+    top = 150 - (temp / max_temp) * height
     dpg.configure_item("thermo_level", pmin=(25, top), pmax=(35, 150))
 
 
 def update_pressure_gauge(pressure: float) -> None:
     """Rotate pressure gauge arrow."""
-    pressure = max(0.0, min(pressure, 2000.0))
-    angle = math.pi - (pressure / 2000.0) * math.pi
+    max_pressure = dpg.get_value("pressure_max")
+    pressure = max(0.0, min(pressure, max_pressure))
+    angle = math.pi - (pressure / max_pressure) * math.pi
     x = 100 + 70 * math.cos(angle)
     y = 100 - 70 * math.sin(angle)
     dpg.configure_item("pressure_arrow", p1=(100, 100), p2=(x, y))
@@ -168,6 +232,39 @@ with dpg.window(label="Главное окно", width=500, height=400):
             dpg.add_text("Скорость вентилятора")
             dpg.add_text("0.0 об/мин", tag="fan_speed_val")
 
+    dpg.add_separator()
+    dpg.add_text("Настройка приборов")
+    with dpg.group(horizontal=True):
+        dpg.add_input_float(
+            label="Макс. термометра",
+            default_value=100.0,
+            width=120,
+            tag="temp_max",
+            callback=update_thermo_scale,
+        )
+        dpg.add_input_float(
+            label="Деление термометра",
+            default_value=10.0,
+            width=120,
+            tag="temp_step",
+            callback=update_thermo_scale,
+        )
+        dpg.add_input_float(
+            label="Макс. манометра",
+            default_value=2000.0,
+            width=120,
+            tag="pressure_max",
+            callback=update_pressure_scale,
+        )
+        dpg.add_input_float(
+            label="Деление манометра",
+            default_value=200.0,
+            width=120,
+            tag="pressure_step",
+            callback=update_pressure_scale,
+        )
+
+    dpg.add_separator()
     with dpg.group(horizontal=True):
         with dpg.drawlist(width=60, height=180, tag="thermo_draw"):
             dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
@@ -181,6 +278,9 @@ with dpg.window(label="Главное окно", width=500, height=400):
             ]
             dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
             dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
+
+draw_thermometer_scale()
+draw_pressure_scale()
 
 # Setup and launch
 dpg.setup_dearpygui()
