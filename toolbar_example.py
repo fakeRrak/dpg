@@ -1,20 +1,24 @@
 import random
 import math
 import os
+import platform
 import dearpygui.dearpygui as dpg
 
 # Create context
 dpg.create_context()
 
 # Load font with Cyrillic support without bundling binary files
-font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+font_path = (
+    "C:\\Windows\\Fonts\\arial.ttf"
+    if platform.system() == "Windows"
+    else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+)
+
 with dpg.font_registry():
     if os.path.exists(font_path):
         default_font = dpg.add_font(font_path, 16)
-    else:
-        default_font = dpg.add_font_default()
-    dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=default_font)
-dpg.bind_font(default_font)
+        dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=default_font)
+        dpg.bind_font(default_font)
 
 # Create viewport
 dpg.create_viewport(title="Панель приборов AVO", width=500, height=400)
