@@ -5,7 +5,16 @@ import dearpygui.dearpygui as dpg
 dpg.create_context()
 
 # Create viewport
-dpg.create_viewport(title="AVO Instrument Panel", width=500, height=400)
+dpg.create_viewport(title="Панель приборов AVO", width=500, height=400)
+
+# Theme for toolbar buttons
+with dpg.theme(tag="toolbar_theme"):
+    with dpg.theme_component(dpg.mvButton):
+        dpg.add_theme_color(dpg.mvThemeCol_Button, (52, 152, 219))
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (41, 128, 185))
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (31, 97, 141))
+        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
+        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 10, 5)
 
 
 def update_sensors():
@@ -20,65 +29,72 @@ def update_sensors():
         "out_temp_val", f"{desired_temp + random.uniform(-1, 1):.1f} \u00b0C"
     )
     dpg.set_value(
-        "out_pressure_val", f"{inlet_pressure + random.uniform(-5, 5):.1f} Pa"
+        "out_pressure_val", f"{inlet_pressure + random.uniform(-5, 5):.1f} Па"
     )
     dpg.set_value(
-        "air_flow_val", f"{product_flow + random.uniform(-10, 10):.1f} m\u00b3/h"
+        "air_flow_val", f"{product_flow + random.uniform(-10, 10):.1f} м\u00b3/ч"
     )
     dpg.set_value(
-        "fan_speed_val", f"{fan_speed + random.uniform(-20, 20):.1f} rpm"
+        "fan_speed_val", f"{fan_speed + random.uniform(-20, 20):.1f} об/мин"
     )
 
 
 # Main window
-with dpg.window(label="Main Window", width=500, height=400):
+with dpg.window(label="Главное окно", width=500, height=400):
     # Toolbar group at top
     with dpg.group(horizontal=True):
-        dpg.add_button(label="Open", callback=lambda: print("Open clicked"))
-        dpg.add_button(label="Save", callback=lambda: print("Save clicked"))
-        dpg.add_button(label="Cut", callback=lambda: print("Cut clicked"))
-        dpg.add_button(label="Copy", callback=lambda: print("Copy clicked"))
-        dpg.add_button(label="Paste", callback=lambda: print("Paste clicked"))
+        btn_refresh = dpg.add_button(label="Обновить датчики", callback=update_sensors)
+        btn_settings = dpg.add_button(
+            label="Настройки", callback=lambda: print("Открыты настройки")
+        )
+        btn_exit = dpg.add_button(
+            label="Выход", callback=lambda: dpg.stop_dearpygui()
+        )
+
+        for btn in (btn_refresh, btn_settings, btn_exit):
+            dpg.bind_item_theme(btn, "toolbar_theme")
 
     dpg.add_separator()
-    dpg.add_text("Input Parameters")
+    dpg.add_text("Входные параметры")
     dpg.add_input_float(
-        label="Desired Output Temperature (\u00b0C)", default_value=20.0, tag="desired_temp"
+        label="Желаемая температура на выходе (\u00b0C)",
+        default_value=20.0,
+        tag="desired_temp",
     )
     dpg.add_input_float(
-        label="Inlet Pressure (Pa)", default_value=1000.0, tag="inlet_pressure"
+        label="Давление на входе (Па)", default_value=1000.0, tag="inlet_pressure"
     )
     dpg.add_input_float(
-        label="Inlet Temperature (\u00b0C)", default_value=25.0, tag="inlet_temp"
+        label="Температура на входе (\u00b0C)", default_value=25.0, tag="inlet_temp"
     )
     dpg.add_input_float(
-        label="Product Flow (m\u00b3/h)", default_value=100.0, tag="product_flow"
+        label="Расход продукта (м\u00b3/ч)", default_value=100.0, tag="product_flow"
     )
     dpg.add_input_float(
-        label="Initial Fan Speed (rpm)", default_value=1000.0, tag="fan_speed"
+        label="Начальная скорость вентилятора (об/мин)",
+        default_value=1000.0,
+        tag="fan_speed",
     )
 
     dpg.add_separator()
-    dpg.add_text("Sensor Readings")
+    dpg.add_text("Показания датчиков")
 
     with dpg.table(header_row=True, resizable=True):
-        dpg.add_table_column(label="Sensor")
-        dpg.add_table_column(label="Value")
+        dpg.add_table_column(label="Датчик")
+        dpg.add_table_column(label="Значение")
 
         with dpg.table_row():
-            dpg.add_text("Output Temperature")
+            dpg.add_text("Температура на выходе")
             dpg.add_text("0.0 \u00b0C", tag="out_temp_val")
         with dpg.table_row():
-            dpg.add_text("Output Pressure")
-            dpg.add_text("0.0 Pa", tag="out_pressure_val")
+            dpg.add_text("Давление на выходе")
+            dpg.add_text("0.0 Па", tag="out_pressure_val")
         with dpg.table_row():
-            dpg.add_text("Air Flow")
-            dpg.add_text("0.0 m\u00b3/h", tag="air_flow_val")
+            dpg.add_text("Расход воздуха")
+            dpg.add_text("0.0 м\u00b3/ч", tag="air_flow_val")
         with dpg.table_row():
-            dpg.add_text("Fan Speed")
-            dpg.add_text("0.0 rpm", tag="fan_speed_val")
-
-    dpg.add_button(label="Refresh Sensors", callback=update_sensors)
+            dpg.add_text("Скорость вентилятора")
+            dpg.add_text("0.0 об/мин", tag="fan_speed_val")
 
 
 # Setup and launch
