@@ -74,6 +74,49 @@ def update_sensors():
     update_pressure_gauge(out_pressure)
 
 
+available_components = ["H2O", "CO2", "O2", "N2"]
+component_inputs: dict[str, str] = {}
+
+
+def update_mix_sum(sender=None, app_data=None, user_data=None) -> None:
+    total = sum(dpg.get_value(tag) for tag in component_inputs.values())
+    missing = max(0.0, 1.0 - total)
+    dpg.set_value(
+        "mix_sum_text", f"Сумма долей: {total:.2f}, не хватает: {missing:.2f}"
+    )
+
+
+def add_selected_components() -> None:
+    for comp in available_components:
+        if dpg.get_value(f"select_{comp}") and comp not in component_inputs:
+            tag = f"share_{comp}"
+            dpg.add_input_float(
+                label=comp,
+                default_value=0.0,
+                min_value=0.0,
+                max_value=1.0,
+                width=100,
+                parent="mix_group",
+                tag=tag,
+                callback=update_mix_sum,
+            )
+            component_inputs[comp] = tag
+            dpg.set_value(f"select_{comp}", False)
+    dpg.configure_item("component_selector", show=False)
+    update_mix_sum()
+
+
+with dpg.window(label="Выбор компонентов", modal=True, show=False, tag="component_selector"):
+    for comp in available_components:
+        dpg.add_checkbox(label=comp, tag=f"select_{comp}")
+    with dpg.group(horizontal=True):
+        dpg.add_button(label="Добавить", callback=add_selected_components)
+        dpg.add_button(
+            label="Отмена",
+            callback=lambda: dpg.configure_item("component_selector", show=False),
+        )
+
+
 # Main window
 with dpg.window(label="Главное окно", width=500, height=400):
     # Toolbar group at top
@@ -110,6 +153,16 @@ with dpg.window(label="Главное окно", width=500, height=400):
         default_value=1000.0,
         tag="fan_speed",
     )
+
+    dpg.add_separator()
+    dpg.add_text("Состав смеси")
+    dpg.add_button(
+        label="Выбрать компоненты",
+        callback=lambda: dpg.configure_item("component_selector", show=True),
+    )
+    with dpg.group(tag="mix_group"):
+        pass
+    dpg.add_text("Сумма долей: 0.00, не хватает: 1.00", tag="mix_sum_text")
 
     dpg.add_separator()
     dpg.add_text("Показания датчиков")
