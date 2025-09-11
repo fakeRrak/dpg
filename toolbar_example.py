@@ -23,14 +23,6 @@ with dpg.font_registry():
 # Create viewport
 dpg.create_viewport(title="Панель приборов AVO", width=500, height=400)
 
-# Theme for toolbar buttons
-with dpg.theme(tag="toolbar_theme"):
-    with dpg.theme_component(dpg.mvButton):
-        dpg.add_theme_color(dpg.mvThemeCol_Button, (52, 152, 219))
-        dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (41, 128, 185))
-        dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (31, 97, 141))
-        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
-        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 10, 5)
 
 
 def update_thermometer(temp: float) -> None:
@@ -72,6 +64,12 @@ def update_sensors():
 
     update_thermometer(out_temp)
     update_pressure_gauge(out_pressure)
+
+
+def auto_update_sensors() -> None:
+    """Automatically refresh sensor readings every second."""
+    update_sensors()
+    dpg.set_frame_callback(dpg.get_frame_count() + 60, auto_update_sensors)
 
 
 available_components = ["H2O", "CO2", "O2", "N2"]
@@ -119,20 +117,6 @@ with dpg.window(label="Выбор компонентов", modal=True, show=Fals
 
 # Main window
 with dpg.window(label="Главное окно", width=500, height=400):
-    # Toolbar group at top
-    with dpg.group(horizontal=True):
-        btn_refresh = dpg.add_button(label="Обновить датчики", callback=update_sensors)
-        btn_settings = dpg.add_button(
-            label="Настройки", callback=lambda: print("Открыты настройки")
-        )
-        btn_exit = dpg.add_button(
-            label="Выход", callback=lambda: dpg.stop_dearpygui()
-        )
-
-        for btn in (btn_refresh, btn_settings, btn_exit):
-            dpg.bind_item_theme(btn, "toolbar_theme")
-
-    dpg.add_separator()
     dpg.add_text("Входные параметры")
     dpg.add_input_float(
         label="Желаемая температура на выходе (\u00b0C)",
@@ -201,7 +185,7 @@ with dpg.window(label="Главное окно", width=500, height=400):
 # Setup and launch
 dpg.setup_dearpygui()
 dpg.show_viewport()
-update_sensors()
+auto_update_sensors()
 
 # Start event loop
 dpg.start_dearpygui()
