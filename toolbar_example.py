@@ -31,6 +31,11 @@ pressure_tick_tags: list[str] = []
 
 current_scale = 1.0
 
+# Digital twin state variables
+dt_out_temp = 20.0
+dt_out_pressure = 1000.0
+dt_air_flow = 100.0
+dt_fan_speed = 1000.0
 
 def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
     """Scale instrument drawings based on slider value."""
@@ -154,19 +159,20 @@ def adjust_scales(out_temp: float, out_pressure: float) -> None:
 
 def update_sensors():
     """Simulate updating sensor values based on user inputs."""
+    global dt_out_temp, dt_out_pressure, dt_air_flow, dt_fan_speed
     desired_temp = dpg.get_value("desired_temp")
     inlet_pressure = dpg.get_value("inlet_pressure")
     inlet_temp = dpg.get_value("inlet_temp")
     product_flow = dpg.get_value("product_flow")
     fan_speed = dpg.get_value("fan_speed")
 
-    # digital twin predictions
-    dt_out_temp = desired_temp
-    dt_out_pressure = inlet_pressure
-    dt_air_flow = product_flow
-    dt_fan_speed = fan_speed
+    # digital twin dynamic predictions
+    dt_out_temp += 0.1 * (((desired_temp + inlet_temp) / 2) - dt_out_temp)
+    dt_out_pressure += 0.1 * (inlet_pressure - dt_out_pressure) - 0.01 * product_flow
+    dt_fan_speed += 0.1 * (fan_speed - dt_fan_speed)
+    dt_air_flow += 0.1 * (product_flow - dt_air_flow) + 0.01 * (dt_fan_speed - dt_air_flow)
 
-    # simulated sensor readings
+    # simulated sensor readings around digital twin predictions
     out_temp = dt_out_temp + random.uniform(-1, 1)
     out_pressure = dt_out_pressure + random.uniform(-5, 5)
     air_flow = dt_air_flow + random.uniform(-10, 10)
