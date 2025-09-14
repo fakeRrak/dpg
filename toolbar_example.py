@@ -40,10 +40,10 @@ dt_out_pressure = 1000.0
 dt_air_flow = 100.0
 dt_fan_speed = 1000.0
 
-def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
-    """Scale instrument drawings based on slider value."""
+
+def scale_instruments(new_scale: float) -> None:
+    """Scale instrument drawings based on the provided value."""
     global current_scale
-    new_scale = dpg.get_value("instrument_scale")
     ratio = new_scale / current_scale if current_scale else 1.0
     for node_tag, draw_tag, w, h in [
         ("thermo_node", "thermo_draw", 60, 200),
@@ -54,10 +54,10 @@ def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
     current_scale = new_scale
 
 
-def update_font_size(sender=None, app_data=None, user_data=None) -> None:
-    """Adjust global font size based on slider value."""
+def update_font_size(size: int) -> None:
+    """Adjust global font size based on the provided value."""
     global current_font, current_font_size
-    size = int(dpg.get_value("font_size"))
+    size = int(size)
     if size == current_font_size:
         return
     current_font_size = size
@@ -67,6 +67,18 @@ def update_font_size(sender=None, app_data=None, user_data=None) -> None:
         current_font = dpg.add_font(font_path, current_font_size)
         dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=current_font)
         dpg.bind_font(current_font)
+
+
+def adjust_instrument_scale(delta: float) -> None:
+    """Increase or decrease instrument scale."""
+    new_scale = max(0.5, min(2.0, current_scale + delta))
+    scale_instruments(new_scale)
+
+
+def adjust_font_size(delta: int) -> None:
+    """Increase or decrease font size."""
+    new_size = max(8, min(32, current_font_size + delta))
+    update_font_size(new_size)
 
 
 def draw_thermometer_scale() -> None:
@@ -366,24 +378,6 @@ with dpg.window(label="Главное окно", width=500, height=400):
             callback=update_pressure_scale,
         )
 
-    dpg.add_slider_float(
-        label="Масштаб приборов",
-        default_value=1.0,
-        min_value=0.5,
-        max_value=2.0,
-        tag="instrument_scale",
-        callback=scale_instruments,
-    )
-
-    dpg.add_slider_int(
-        label="Размер текста",
-        default_value=current_font_size,
-        min_value=8,
-        max_value=32,
-        tag="font_size",
-        callback=update_font_size,
-    )
-
     dpg.add_separator()
     with dpg.group(horizontal=True):
         with dpg.group():
@@ -404,6 +398,17 @@ with dpg.window(label="Главное окно", width=500, height=400):
                     dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
                     dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
                     dpg.draw_text((72, 130), "Манометр")
+
+# Separate window for scale controls
+with dpg.window(label="Масштабирование", pos=(520, 50), tag="scale_window"):
+    dpg.add_text("Масштаб приборов")
+    with dpg.group(horizontal=True):
+        dpg.add_button(label="-", width=30, callback=lambda: adjust_instrument_scale(-0.1))
+        dpg.add_button(label="+", width=30, callback=lambda: adjust_instrument_scale(0.1))
+    dpg.add_text("Размер текста")
+    with dpg.group(horizontal=True):
+        dpg.add_button(label="-", width=30, callback=lambda: adjust_font_size(-1))
+        dpg.add_button(label="+", width=30, callback=lambda: adjust_font_size(1))
 
 # Setup and launch
 dpg.setup_dearpygui()
