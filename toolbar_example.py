@@ -54,13 +54,15 @@ def scale_instruments(new_scale: float) -> None:
     current_scale = new_scale
 
 
-def update_font_size(size: int) -> None:
+def update_font_size(sender, app_data, user_data) -> None:
     """Adjust global font size based on the provided value."""
     global current_font, current_font_size
-    size = int(size)
-    if size == current_font_size:
+
+    new_size = int(app_data)
+    if new_size == current_font_size:
         return
-    current_font_size = size
+
+    current_font_size = new_size
     if os.path.exists(font_path):
         if current_font is not None:
             dpg.delete_item(current_font)
@@ -78,7 +80,7 @@ def adjust_instrument_scale(delta: float) -> None:
 def adjust_font_size(delta: int) -> None:
     """Increase or decrease font size."""
     new_size = max(8, min(32, current_font_size + delta))
-    update_font_size(new_size)
+    update_font_size(None, new_size, None)
 
 
 def draw_thermometer_scale() -> None:
