@@ -37,12 +37,12 @@ def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
     global current_scale
     new_scale = dpg.get_value("instrument_scale")
     ratio = new_scale / current_scale if current_scale else 1.0
-    for tag, w, h in [
-        ("thermo_draw", 60, 200),
-        ("pressure_draw", 200, 150),
+    for node_tag, draw_tag, w, h in [
+        ("thermo_node", "thermo_draw", 60, 200),
+        ("pressure_node", "pressure_draw", 200, 150),
     ]:
-        dpg.apply_transform(tag, dpg.create_scale_matrix([ratio, ratio, 1]))
-        dpg.configure_item(tag, width=int(w * new_scale), height=int(h * new_scale))
+        dpg.apply_transform(node_tag, dpg.create_scale_matrix([ratio, ratio, 1]))
+        dpg.configure_item(draw_tag, width=int(w * new_scale), height=int(h * new_scale))
     current_scale = new_scale
 
 
@@ -63,12 +63,12 @@ def draw_thermometer_scale() -> None:
         value = i * step
         y = base_y - (value / max_temp) * height
         tick_tag = f"thermo_tick_{i}"
-        dpg.draw_line((35, y), (45, y), color=(255, 255, 255), parent="thermo_draw", tag=tick_tag)
+        dpg.draw_line((35, y), (45, y), color=(255, 255, 255), parent="thermo_node", tag=tick_tag)
         thermo_tick_tags.append(tick_tag)
         # draw text only if it does not overlap previous label
         if last_y - y >= 15 or i == count - 1:
             text_tag = f"thermo_text_{i}"
-            dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_draw", tag=text_tag)
+            dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_node", tag=text_tag)
             thermo_tick_tags.append(text_tag)
             last_y = y
 
@@ -95,7 +95,7 @@ def draw_pressure_scale() -> None:
         tx = 100 + 90 * math.cos(angle) - 10
         ty = 100 - 90 * math.sin(angle) - 5
         tick_tag = f"pressure_tick_{i}"
-        dpg.draw_line((x1, y1), (x2, y2), color=(255, 255, 255), parent="pressure_draw", tag=tick_tag)
+        dpg.draw_line((x1, y1), (x2, y2), color=(255, 255, 255), parent="pressure_node", tag=tick_tag)
         pressure_tick_tags.append(tick_tag)
         if (
             last_angle is None
@@ -104,7 +104,7 @@ def draw_pressure_scale() -> None:
             or i == count - 1
         ):
             text_tag = f"pressure_text_{i}"
-            dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_draw", tag=text_tag)
+            dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_node", tag=text_tag)
             pressure_tick_tags.append(text_tag)
             last_angle = angle
 
@@ -325,20 +325,22 @@ with dpg.window(label="Главное окно", width=500, height=400):
     with dpg.group(horizontal=True):
         with dpg.group():
             with dpg.drawlist(width=60, height=200, tag="thermo_draw"):
-                dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
-                dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
-                dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
-                dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
-                dpg.draw_text((18, 180), "Термометр")
+                with dpg.draw_node(tag="thermo_node"):
+                    dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
+                    dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
+                    dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
+                    dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
+                    dpg.draw_text((18, 180), "Термометр")
         with dpg.group():
             with dpg.drawlist(width=200, height=150, tag="pressure_draw"):
-                arc_points = [
-                    (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
-                    for theta in [i * math.pi / 20 for i in range(21)]
-                ]
-                dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
-                dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
-                dpg.draw_text((72, 130), "Манометр")
+                with dpg.draw_node(tag="pressure_node"):
+                    arc_points = [
+                        (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
+                        for theta in [i * math.pi / 20 for i in range(21)]
+                    ]
+                    dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
+                    dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
+                    dpg.draw_text((72, 130), "Манометр")
 
 # Setup and launch
 dpg.setup_dearpygui()
