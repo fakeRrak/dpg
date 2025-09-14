@@ -29,6 +29,23 @@ thermo_tick_tags: list[str] = []
 pressure_tick_tags: list[str] = []
 
 
+current_scale = 1.0
+
+
+def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
+    """Scale instrument drawings based on slider value."""
+    global current_scale
+    new_scale = dpg.get_value("instrument_scale")
+    ratio = new_scale / current_scale if current_scale else 1.0
+    for tag, w, h in [
+        ("thermo_draw", 60, 200),
+        ("pressure_draw", 200, 150),
+    ]:
+        dpg.apply_transform(tag, dpg.create_scale_matrix([ratio, ratio, 1]))
+        dpg.configure_item(tag, width=int(w * new_scale), height=int(h * new_scale))
+    current_scale = new_scale
+
+
 def draw_thermometer_scale() -> None:
     """Draw tick marks and labels for the thermometer."""
     for tag in thermo_tick_tags:
@@ -295,24 +312,37 @@ with dpg.window(label="Главное окно", width=500, height=400):
             callback=update_pressure_scale,
         )
 
+    dpg.add_slider_float(
+        label="Масштаб приборов",
+        default_value=1.0,
+        min_value=0.5,
+        max_value=2.0,
+        tag="instrument_scale",
+        callback=scale_instruments,
+    )
+
     dpg.add_separator()
     with dpg.group(horizontal=True):
         with dpg.group():
-            dpg.add_text("Термометр")
-            with dpg.drawlist(width=60, height=180, tag="thermo_draw"):
+            with dpg.drawlist(width=60, height=200, tag="thermo_draw"):
                 dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
                 dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
                 dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
                 dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
+                _label = "Термометр"
+                _tw, _ = dpg.get_text_size(_label)
+                dpg.draw_text((30 - _tw / 2, 180), _label)
         with dpg.group():
-            dpg.add_text("Манометр")
-            with dpg.drawlist(width=200, height=120, tag="pressure_draw"):
+            with dpg.drawlist(width=200, height=150, tag="pressure_draw"):
                 arc_points = [
                     (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
                     for theta in [i * math.pi / 20 for i in range(21)]
                 ]
                 dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
                 dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
+                _label = "Манометр"
+                _tw, _ = dpg.get_text_size(_label)
+                dpg.draw_text((100 - _tw / 2, 130), _label)
 
 draw_thermometer_scale()
 draw_pressure_scale()
