@@ -329,9 +329,7 @@ with dpg.window(label="Главное окно", width=500, height=400):
                 dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
                 dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
                 dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
-                _label = "Термометр"
-                _tw, _ = dpg.get_text_size(_label)
-                dpg.draw_text((30 - _tw / 2, 180), _label)
+                dpg.draw_text((18, 180), "Термометр")
         with dpg.group():
             with dpg.drawlist(width=200, height=150, tag="pressure_draw"):
                 arc_points = [
@@ -340,15 +338,12 @@ with dpg.window(label="Главное окно", width=500, height=400):
                 ]
                 dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
                 dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
-                _label = "Манометр"
-                _tw, _ = dpg.get_text_size(_label)
-                dpg.draw_text((100 - _tw / 2, 130), _label)
-
-draw_thermometer_scale()
-draw_pressure_scale()
+                dpg.draw_text((72, 130), "Манометр")
 
 # Setup and launch
 dpg.setup_dearpygui()
+draw_thermometer_scale()
+draw_pressure_scale()
 dpg.show_viewport()
 auto_update_sensors()
 
