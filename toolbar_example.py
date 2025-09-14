@@ -160,18 +160,38 @@ def update_sensors():
     product_flow = dpg.get_value("product_flow")
     fan_speed = dpg.get_value("fan_speed")
 
-    out_temp = desired_temp + random.uniform(-1, 1)
-    out_pressure = inlet_pressure + random.uniform(-5, 5)
+    # digital twin predictions
+    dt_out_temp = desired_temp
+    dt_out_pressure = inlet_pressure
+    dt_air_flow = product_flow
+    dt_fan_speed = fan_speed
+
+    # simulated sensor readings
+    out_temp = dt_out_temp + random.uniform(-1, 1)
+    out_pressure = dt_out_pressure + random.uniform(-5, 5)
+    air_flow = dt_air_flow + random.uniform(-10, 10)
+    fan_speed_out = dt_fan_speed + random.uniform(-20, 20)
 
     adjust_scales(out_temp, out_pressure)
 
     dpg.set_value("out_temp_val", f"{out_temp:.1f} \u00b0C")
+    dpg.set_value("out_temp_dt", f"{dt_out_temp:.1f} \u00b0C")
+    dpg.set_value("out_temp_diff", f"{out_temp - dt_out_temp:+.1f} \u00b0C")
+
     dpg.set_value("out_pressure_val", f"{out_pressure:.1f} Па")
+    dpg.set_value("out_pressure_dt", f"{dt_out_pressure:.1f} Па")
     dpg.set_value(
-        "air_flow_val", f"{product_flow + random.uniform(-10, 10):.1f} м\u00b3/ч"
+        "out_pressure_diff", f"{out_pressure - dt_out_pressure:+.1f} Па"
     )
+
+    dpg.set_value("air_flow_val", f"{air_flow:.1f} м\u00b3/ч")
+    dpg.set_value("air_flow_dt", f"{dt_air_flow:.1f} м\u00b3/ч")
+    dpg.set_value("air_flow_diff", f"{air_flow - dt_air_flow:+.1f} м\u00b3/ч")
+
+    dpg.set_value("fan_speed_val", f"{fan_speed_out:.1f} об/мин")
+    dpg.set_value("fan_speed_dt", f"{dt_fan_speed:.1f} об/мин")
     dpg.set_value(
-        "fan_speed_val", f"{fan_speed + random.uniform(-20, 20):.1f} об/мин"
+        "fan_speed_diff", f"{fan_speed_out - dt_fan_speed:+.1f} об/мин"
     )
 
     update_thermometer(out_temp)
@@ -264,21 +284,31 @@ with dpg.window(label="Главное окно", width=500, height=400):
     dpg.add_text("Показания датчиков")
 
     with dpg.table(header_row=True, resizable=True):
-        dpg.add_table_column(label="Датчик")
-        dpg.add_table_column(label="Значение")
+        dpg.add_table_column(label="Параметр")
+        dpg.add_table_column(label="Сенсор")
+        dpg.add_table_column(label="Цифровой двойник")
+        dpg.add_table_column(label="Отклонение")
 
         with dpg.table_row():
             dpg.add_text("Температура на выходе")
             dpg.add_text("0.0 \u00b0C", tag="out_temp_val")
+            dpg.add_text("0.0 \u00b0C", tag="out_temp_dt")
+            dpg.add_text("+0.0 \u00b0C", tag="out_temp_diff")
         with dpg.table_row():
             dpg.add_text("Давление на выходе")
             dpg.add_text("0.0 Па", tag="out_pressure_val")
+            dpg.add_text("0.0 Па", tag="out_pressure_dt")
+            dpg.add_text("+0.0 Па", tag="out_pressure_diff")
         with dpg.table_row():
             dpg.add_text("Расход воздуха")
             dpg.add_text("0.0 м\u00b3/ч", tag="air_flow_val")
+            dpg.add_text("0.0 м\u00b3/ч", tag="air_flow_dt")
+            dpg.add_text("+0.0 м\u00b3/ч", tag="air_flow_diff")
         with dpg.table_row():
             dpg.add_text("Скорость вентилятора")
             dpg.add_text("0.0 об/мин", tag="fan_speed_val")
+            dpg.add_text("0.0 об/мин", tag="fan_speed_dt")
+            dpg.add_text("+0.0 об/мин", tag="fan_speed_diff")
 
     dpg.add_separator()
     dpg.add_text("Настройка приборов")
