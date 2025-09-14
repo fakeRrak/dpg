@@ -14,11 +14,14 @@ font_path = (
     else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 )
 
+current_font_size = 16
+current_font = None
+
 with dpg.font_registry():
     if os.path.exists(font_path):
-        default_font = dpg.add_font(font_path, 16)
-        dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=default_font)
-        dpg.bind_font(default_font)
+        current_font = dpg.add_font(font_path, current_font_size)
+        dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=current_font)
+        dpg.bind_font(current_font)
 
 # Create viewport
 dpg.create_viewport(title="Панель приборов AVO", width=500, height=400)
@@ -49,6 +52,21 @@ def scale_instruments(sender=None, app_data=None, user_data=None) -> None:
         dpg.apply_transform(node_tag, dpg.create_scale_matrix([ratio, ratio, 1]))
         dpg.configure_item(draw_tag, width=int(w * new_scale), height=int(h * new_scale))
     current_scale = new_scale
+
+
+def update_font_size(sender=None, app_data=None, user_data=None) -> None:
+    """Adjust global font size based on slider value."""
+    global current_font, current_font_size
+    size = int(dpg.get_value("font_size"))
+    if size == current_font_size:
+        return
+    current_font_size = size
+    if os.path.exists(font_path):
+        if current_font is not None:
+            dpg.delete_item(current_font)
+        current_font = dpg.add_font(font_path, current_font_size)
+        dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic, parent=current_font)
+        dpg.bind_font(current_font)
 
 
 def draw_thermometer_scale() -> None:
@@ -355,6 +373,15 @@ with dpg.window(label="Главное окно", width=500, height=400):
         max_value=2.0,
         tag="instrument_scale",
         callback=scale_instruments,
+    )
+
+    dpg.add_slider_int(
+        label="Размер текста",
+        default_value=current_font_size,
+        min_value=8,
+        max_value=32,
+        tag="font_size",
+        callback=update_font_size,
     )
 
     dpg.add_separator()
