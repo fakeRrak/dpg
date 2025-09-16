@@ -34,9 +34,19 @@ pressure_tick_tags: list[str] = []
 
 current_scale = 1.0
 
+# Theme management
+fg_color = (255, 255, 255)
+current_theme = "dark"
+
+light_theme = dpg.add_theme()
+with dpg.theme_component(dpg.mvAll, parent=light_theme):
+    dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (255, 255, 255))
+    dpg.add_theme_color(dpg.mvThemeCol_Text, (0, 0, 0))
+    dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (230, 230, 230))
+
 # Digital twin state variables
 dt_out_temp = 20.0
-dt_out_pressure = 1000.0
+dt_out_pressure = 100.0
 dt_air_flow = 100.0
 dt_fan_speed = 1000.0
 
@@ -100,12 +110,12 @@ def draw_thermometer_scale() -> None:
         value = i * step
         y = base_y - (value / max_temp) * height
         tick_tag = f"thermo_tick_{i}"
-        dpg.draw_line((35, y), (45, y), color=(255, 255, 255), parent="thermo_node", tag=tick_tag)
+        dpg.draw_line((35, y), (45, y), color=fg_color, parent="thermo_node", tag=tick_tag)
         thermo_tick_tags.append(tick_tag)
         # draw text only if it does not overlap previous label
         if last_y - y >= 15 or i == count - 1:
             text_tag = f"thermo_text_{i}"
-            dpg.draw_text((48, y - 7), f"{int(value)}", color=(255, 255, 255), size=10, parent="thermo_node", tag=text_tag)
+            dpg.draw_text((48, y - 7), f"{int(value)}", color=fg_color, size=10, parent="thermo_node", tag=text_tag)
             thermo_tick_tags.append(text_tag)
             last_y = y
 
@@ -132,7 +142,7 @@ def draw_pressure_scale() -> None:
         tx = 100 + 90 * math.cos(angle) - 10
         ty = 100 - 90 * math.sin(angle) - 5
         tick_tag = f"pressure_tick_{i}"
-        dpg.draw_line((x1, y1), (x2, y2), color=(255, 255, 255), parent="pressure_node", tag=tick_tag)
+        dpg.draw_line((x1, y1), (x2, y2), color=fg_color, parent="pressure_node", tag=tick_tag)
         pressure_tick_tags.append(tick_tag)
         if (
             last_angle is None
@@ -141,7 +151,7 @@ def draw_pressure_scale() -> None:
             or i == count - 1
         ):
             text_tag = f"pressure_text_{i}"
-            dpg.draw_text((tx, ty), f"{int(value)}", color=(255, 255, 255), size=10, parent="pressure_node", tag=text_tag)
+            dpg.draw_text((tx, ty), f"{int(value)}", color=fg_color, size=10, parent="pressure_node", tag=text_tag)
             pressure_tick_tags.append(text_tag)
             last_angle = angle
 
@@ -154,6 +164,33 @@ def update_thermo_scale(sender=None, app_data=None, user_data=None) -> None:
 def update_pressure_scale(sender=None, app_data=None, user_data=None) -> None:
     draw_pressure_scale()
     update_sensors()
+
+
+def update_theme_colors() -> None:
+    """Apply current theme colors to static drawing elements."""
+    dpg.configure_item("thermo_outline", color=fg_color)
+    dpg.configure_item("thermo_circle", color=fg_color)
+    dpg.configure_item("thermo_label", color=fg_color)
+    dpg.configure_item("pressure_arc", color=fg_color)
+    dpg.configure_item("pressure_label", color=fg_color)
+    draw_thermometer_scale()
+    draw_pressure_scale()
+
+
+def toggle_theme() -> None:
+    """Toggle between default dark theme and light theme."""
+    global current_theme, fg_color
+    if current_theme == "dark":
+        dpg.bind_theme(light_theme)
+        fg_color = (0, 0, 0)
+        dpg.configure_item("theme_toggle", label="Тёмная тема")
+        current_theme = "light"
+    else:
+        dpg.bind_theme(None)
+        fg_color = (255, 255, 255)
+        dpg.configure_item("theme_toggle", label="Светлая тема")
+        current_theme = "dark"
+    update_theme_colors()
 
 
 def update_thermometer(temp: float) -> None:
@@ -216,10 +253,10 @@ def update_sensors():
     dpg.set_value("out_temp_dt", f"{dt_out_temp:.1f} \u00b0C")
     dpg.set_value("out_temp_diff", f"{out_temp - dt_out_temp:+.1f} \u00b0C")
 
-    dpg.set_value("out_pressure_val", f"{out_pressure:.1f} Па")
-    dpg.set_value("out_pressure_dt", f"{dt_out_pressure:.1f} Па")
+    dpg.set_value("out_pressure_val", f"{out_pressure:.1f} кПа")
+    dpg.set_value("out_pressure_dt", f"{dt_out_pressure:.1f} кПа")
     dpg.set_value(
-        "out_pressure_diff", f"{out_pressure - dt_out_pressure:+.1f} Па"
+        "out_pressure_diff", f"{out_pressure - dt_out_pressure:+.1f} кПа"
     )
 
     dpg.set_value("air_flow_val", f"{air_flow:.1f} м\u00b3/ч")
@@ -294,7 +331,7 @@ with dpg.window(label="Главное окно", width=500, height=400):
         tag="desired_temp",
     )
     dpg.add_input_float(
-        label="Давление на входе (Па)", default_value=1000.0, tag="inlet_pressure"
+        label="Давление на входе (кПа)", default_value=100.0, tag="inlet_pressure"
     )
     dpg.add_input_float(
         label="Температура на входе (\u00b0C)", default_value=25.0, tag="inlet_temp"
@@ -334,9 +371,9 @@ with dpg.window(label="Главное окно", width=500, height=400):
             dpg.add_text("+0.0 \u00b0C", tag="out_temp_diff")
         with dpg.table_row():
             dpg.add_text("Давление на выходе")
-            dpg.add_text("0.0 Па", tag="out_pressure_val")
-            dpg.add_text("0.0 Па", tag="out_pressure_dt")
-            dpg.add_text("+0.0 Па", tag="out_pressure_diff")
+            dpg.add_text("0.0 кПа", tag="out_pressure_val")
+            dpg.add_text("0.0 кПа", tag="out_pressure_dt")
+            dpg.add_text("+0.0 кПа", tag="out_pressure_diff")
         with dpg.table_row():
             dpg.add_text("Расход воздуха")
             dpg.add_text("0.0 м\u00b3/ч", tag="air_flow_val")
@@ -367,14 +404,14 @@ with dpg.window(label="Главное окно", width=500, height=400):
         )
         dpg.add_input_float(
             label="Макс. манометра",
-            default_value=2000.0,
+            default_value=200.0,
             width=120,
             tag="pressure_max",
             callback=update_pressure_scale,
         )
         dpg.add_input_float(
             label="Деление манометра",
-            default_value=200.0,
+            default_value=20.0,
             width=120,
             tag="pressure_step",
             callback=update_pressure_scale,
@@ -385,11 +422,11 @@ with dpg.window(label="Главное окно", width=500, height=400):
         with dpg.group():
             with dpg.drawlist(width=60, height=200, tag="thermo_draw"):
                 with dpg.draw_node(tag="thermo_node"):
-                    dpg.draw_rectangle((25, 20), (35, 150), color=(255, 255, 255))
-                    dpg.draw_circle((30, 150), 20, color=(255, 255, 255))
+                    dpg.draw_rectangle((25, 20), (35, 150), color=fg_color, tag="thermo_outline")
+                    dpg.draw_circle((30, 150), 20, color=fg_color, tag="thermo_circle")
                     dpg.draw_rectangle((25, 150), (35, 150), color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_level")
                     dpg.draw_circle((30, 150), 20, color=(255, 0, 0), fill=(255, 0, 0), tag="thermo_bulb")
-                    dpg.draw_text((18, 180), "Термометр")
+                    dpg.draw_text((18, 180), "Термометр", color=fg_color, tag="thermo_label")
         with dpg.group():
             with dpg.drawlist(width=200, height=150, tag="pressure_draw"):
                 with dpg.draw_node(tag="pressure_node"):
@@ -397,9 +434,9 @@ with dpg.window(label="Главное окно", width=500, height=400):
                         (100 + 80 * math.cos(theta), 100 - 80 * math.sin(theta))
                         for theta in [i * math.pi / 20 for i in range(21)]
                     ]
-                    dpg.draw_polyline(arc_points, color=(255, 255, 255), thickness=2)
+                    dpg.draw_polyline(arc_points, color=fg_color, thickness=2, tag="pressure_arc")
                     dpg.draw_line((100, 100), (100, 20), color=(255, 0, 0), thickness=3, tag="pressure_arrow")
-                    dpg.draw_text((72, 130), "Манометр")
+                    dpg.draw_text((72, 130), "Манометр", color=fg_color, tag="pressure_label")
 
 # Separate window for scale controls
 with dpg.window(label="Масштабирование", pos=(520, 50), tag="scale_window"):
@@ -411,6 +448,8 @@ with dpg.window(label="Масштабирование", pos=(520, 50), tag="scal
     with dpg.group(horizontal=True):
         dpg.add_button(label="-", width=30, callback=lambda: adjust_font_size(-1))
         dpg.add_button(label="+", width=30, callback=lambda: adjust_font_size(1))
+    dpg.add_text("Тема")
+    dpg.add_button(label="Светлая тема", callback=toggle_theme, tag="theme_toggle")
 
 # Setup and launch
 dpg.setup_dearpygui()
